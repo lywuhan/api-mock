@@ -14,49 +14,66 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // 模拟API数据（实际项目中可以从文件或数据库读取）
 let apiConfigs = [];
 
+// 存储注册的路由信息
+let registeredRoutes = [];
+
 // 动态注册路由
 const registerRoutes = () => {
   // 清除现有路由
-  app._router.stack = app._router.stack.filter(layer => {
-    return !layer.route || !layer.route.path.startsWith('/api') && !layer.route.path.startsWith('/admin');
-  });
+  if (app._router && app._router.stack) {
+    app._router.stack = app._router.stack.filter(layer => {
+      return !layer.route || !layer.route.path.startsWith('/api');
+    });
+  }
+
+  // 清空注册记录
+  registeredRoutes = [];
 
   // 注册新路由
   apiConfigs.forEach(config => {
-    const { url, method, mockData, delay = 0, statusCode = 200 } = config;
-    
-    // 处理路径参数，如 /user/:id
-    const routePath = url.replace(/:\w+/g, (match) => {
-      return match; // 保留原始参数名，如 :id
-    });
-    
-    // 检查方法是否支持
-    const methodLower = method.toLowerCase();
-    if (!app[methodLower]) {
-      console.warn(`不支持的HTTP方法: ${method}`);
-      return;
+    try {
+      const { url, method, mockData, delay = 0, statusCode = 200 } = config;
+      
+      // 处理路径参数，如 /user/:id
+      const routePath = url.replace(/:\w+/g, (match) => {
+        return match; // 保留原始参数名，如 :id
+      });
+      
+      // 检查方法是否支持
+      const methodLower = method.toLowerCase();
+      if (!app[methodLower]) {
+        console.warn(`不支持的HTTP方法: ${method}`);
+        return;
+      }
+      
+      // 注册路由
+      app[methodLower](routePath, (req, res) => {
+        // 模拟响应延迟
+        setTimeout(() => {
+          try {
+            // 生成Mock数据
+            const data = Mock.mock(JSON.parse(mockData));
+            res.status(statusCode).json(data);
+          } catch (error) {
+            console.error('Mock数据生成错误:', error);
+            res.status(500).json({
+              success: false,
+              message: 'Mock数据格式错误',
+              error: error.message
+            });
+          }
+        }, delay);
+      });
+      
+      // 记录注册的路由
+      registeredRoutes.push({ url: routePath, method });
+      console.log(`已注册路由: ${method} ${routePath}`);
+    } catch (error) {
+      console.error('注册路由失败:', error, '配置:', config);
     }
-    
-    app[methodLower](routePath, (req, res) => {
-      // 模拟响应延迟
-      setTimeout(() => {
-        try {
-          // 生成Mock数据
-          const data = Mock.mock(JSON.parse(mockData));
-          res.status(statusCode).json(data);
-        } catch (error) {
-          console.error('Mock数据生成错误:', error);
-          res.status(500).json({
-            success: false,
-            message: 'Mock数据格式错误',
-            error: error.message
-          });
-        }
-      }, delay);
-    });
   });
   
-  console.log(`已注册 ${apiConfigs.length} 个Mock接口`);
+  console.log(`总共注册 ${registeredRoutes.length} 个Mock接口`);
 };
 
 // 提供API配置管理接口

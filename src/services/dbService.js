@@ -65,9 +65,11 @@ class DBService {
       clearRequest.onerror = reject;
 
       clearRequest.onsuccess = () => {
+        
         // 保存新数据
         modules.forEach(module => {
-          store.put(module);
+          console.log('module ', module);
+          store.add(module);
         });
 
         transaction.oncomplete = () => resolve(true);

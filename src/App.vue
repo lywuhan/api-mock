@@ -103,19 +103,23 @@
     </el-container>
 
     <!-- 模块添加/编辑弹窗 -->
-    <el-dialog v-model="moduleDialogVisible" :title="moduleDialogTitle" destroy-on-close>
+    <el-dialog
+      v-model="moduleDialogVisible"
+      :title="moduleDialogTitle"
+      destroy-on-close
+    >
       <el-form :model="moduleForm" label-width="80px">
         <el-form-item label="模块名称" required>
           <el-input v-model="moduleForm.label" placeholder="请输入模块名称" />
         </el-form-item>
         <el-form-item label="父模块">
-            <el-tree
-              style="width: 100%"
-              :data="modules"
-              :props="defaultProps"
-              default-expand-all
-              @node-click="handleNodeSelect"
-            />
+          <el-tree
+            style="width: 100%"
+            :data="modules"
+            :props="defaultProps"
+            default-expand-all
+            @node-click="handleNodeSelect"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -146,137 +150,14 @@
     </el-popover>
 
     <!-- API添加/编辑弹窗 -->
-    <el-dialog v-model="apiDialogVisible" :title="apiDialogTitle" width="800px">
-      <el-form
-        :model="apiForm"
-        label-width="100px"
-        :rules="apiFormRules"
-        ref="apiFormRef"
-      >
-        <!-- 基础信息 -->
-        <el-form-item label="接口名称" prop="name">
-          <el-input v-model="apiForm.name" placeholder="请输入接口名称" />
-        </el-form-item>
-        <el-form-item label="URL路径" prop="url">
-          <el-input
-            v-model="apiForm.url"
-            placeholder="请输入URL路径，以/开头"
-          />
-        </el-form-item>
-        <el-form-item label="请求方法" prop="method">
-          <el-select v-model="apiForm.method" placeholder="请选择请求方法">
-            <el-option label="GET" value="GET" />
-            <el-option label="POST" value="POST" />
-            <el-option label="PUT" value="PUT" />
-            <el-option label="DELETE" value="DELETE" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="所属模块" prop="moduleId">
-          <el-select v-model="apiForm.moduleId" placeholder="请选择所属模块">
-            <el-option
-              v-for="module in modules"
-              :key="module.id"
-              :label="module.label"
-              :value="module.id"
-            />
-          </el-select>
-        </el-form-item>
-
-        <!-- Mock数据配置 -->
-        <el-form-item label="Mock数据">
-          <div class="form-tree-container">
-            <!-- 表单树操作栏 -->
-            <div class="form-tree-actions">
-              <el-button type="primary" size="small" @click="addRootField">
-                <el-icon><Plus /></el-icon> 添加字段
-              </el-button>
-              <el-button type="success" size="small" @click="clearFormTree">
-                <el-icon><Delete /></el-icon> 清空
-              </el-button>
-            </div>
-
-            <!-- 表单树 -->
-            <div class="form-tree">
-              <el-tree
-                :data="formTreeData"
-                node-key="id"
-                :props="treeProps"
-                default-expand-all
-              >
-                <template #default="{ node, data }">
-                  <div class="tree-node-content">
-                    <span class="field-name">{{ data.name }}</span>
-                    <span class="field-type">({{ data.type }})</span>
-                    <div class="node-actions">
-                      <el-button
-                        type="text"
-                        size="small"
-                        @click="editField(data)"
-                      >
-                        <el-icon><Edit /></el-icon> 编辑
-                      </el-button>
-                      <el-button
-                        type="text"
-                        size="small"
-                        @click="addChildField(data.id)"
-                      >
-                        <el-icon><Plus /></el-icon> 添加子字段
-                      </el-button>
-                      <el-button
-                        type="text"
-                        size="small"
-                        @click="deleteField(data.id)"
-                      >
-                        <el-icon><Delete /></el-icon> 删除
-                      </el-button>
-                    </div>
-                  </div>
-                </template>
-              </el-tree>
-            </div>
-
-            <!-- 空状态 -->
-            <div v-if="formTreeData.length === 0" class="form-tree-empty">
-              <el-empty description="请添加字段配置" />
-            </div>
-          </div>
-        </el-form-item>
-
-        <!-- 实时预览 -->
-        <el-form-item label="预览数据">
-          <div class="preview-container">
-            <pre v-if="previewData">{{
-              JSON.stringify(previewData, null, 2)
-            }}</pre>
-            <div v-else class="preview-empty">请输入Mock数据模板查看预览</div>
-          </div>
-        </el-form-item>
-
-        <!-- 响应设置 -->
-        <el-form-item label="响应延迟">
-          <el-input-number
-            v-model="apiForm.delay"
-            :min="0"
-            :max="5000"
-            placeholder="请输入延迟时间（ms）"
-          />
-        </el-form-item>
-        <el-form-item label="HTTP状态码">
-          <el-input-number
-            v-model="apiForm.statusCode"
-            :min="100"
-            :max="599"
-            placeholder="请输入状态码"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="apiDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveApi">保存</el-button>
-        </span>
-      </template>
-    </el-dialog>
+    <ApiDialog
+      v-model:visible="apiDialogVisible"
+      :title="apiDialogTitle"
+      :api="editingApi"
+      :modules="modules"
+      :current-module-id="currentModuleId"
+      @save="handleApiSave"
+    />
 
     <!-- 接口测试弹窗 -->
     <el-dialog
@@ -402,7 +283,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, unref, toValue, toRaw } from "vue";
+import {
+  ref,
+  reactive,
+  computed,
+  watch,
+  onMounted,
+  unref,
+  toValue,
+  toRaw,
+} from "vue";
 import { Plus, Download, Upload, Delete } from "@element-plus/icons-vue";
 import { ElMessage, ElLoading, ElMessageBox } from "element-plus";
 import Mock from "mockjs";
@@ -412,6 +302,7 @@ import {
   healthCheckService,
 } from "./services/apiService";
 import dbService from "./services/dbService";
+import ApiDialog from "./components/ApiDialog.vue";
 
 // 模块数据
 const modules = ref([
@@ -455,7 +346,7 @@ const handleNodeSelect = (data) => {
 };
 
 // 处理右键菜单
-const handleNodeContextMenu = (event, node) => {
+const handleNodeContextMenu = (event, data, node) => {
   event.preventDefault();
   selectedNode.value = node;
   contextMenuVisible.value = true;
@@ -476,6 +367,7 @@ const editModule = () => {
     moduleDialogTitle.value = "编辑模块";
     moduleForm.label = data.label;
     editingModuleId.value = data.id;
+
     moduleDialogVisible.value = true;
     contextMenuVisible.value = false;
   }
@@ -526,6 +418,12 @@ const saveModule = () => {
       return false;
     };
     updateNode(modules.value, editingModuleId.value, moduleForm.label);
+    if (targetNode.value) {
+      treeRef.value.append(selectedNode.value.data, targetNode.value);
+    } else {
+      modules.value.push(selectedNode.value.data);
+    }
+    treeRef.value.remove(selectedNode.value);
   } else {
     // 添加新模块
     const newModule = {
@@ -538,7 +436,6 @@ const saveModule = () => {
     } else {
       modules.value.push(newModule);
     }
-
   }
 
   moduleDialogVisible.value = false;
@@ -549,7 +446,7 @@ watch(moduleDialogVisible, (newVal) => {
     targetNode.value = null;
     moduleForm.label = "";
   }
-})
+});
 
 // API数据
 const apis = ref([
@@ -815,7 +712,6 @@ watch(
 
 // 组件挂载时加载数据
 onMounted(async () => {
- 
   await loadConfigFromDB();
   await checkHealth();
 });
@@ -830,354 +726,12 @@ const copyUrl = (url) => {
 // API弹窗
 const apiDialogVisible = ref(false);
 const apiDialogTitle = ref("添加接口");
-const apiFormRef = ref(null);
-const apiForm = reactive({
-  name: "",
-  url: "",
-  method: "GET",
-  moduleId: "",
-  mockData: "",
-  delay: 0,
-  statusCode: 200,
-});
-const editingApiId = ref(null);
-
-// API表单验证规则
-const apiFormRules = {
-  name: [{ required: true, message: "请输入接口名称", trigger: "blur" }],
-  url: [
-    { required: true, message: "请输入URL路径", trigger: "blur" },
-    { pattern: /^\//, message: "URL路径必须以/开头", trigger: "blur" },
-  ],
-  method: [{ required: true, message: "请选择请求方法", trigger: "change" }],
-  moduleId: [{ required: true, message: "请选择所属模块", trigger: "change" }],
-};
-
-// 表单树数据
-const formTreeData = ref([]);
-
-// 树组件配置
-const treeProps = {
-  children: "children",
-  label: "name",
-};
-
-// 字段编辑弹窗
-const fieldDialogVisible = ref(false);
-const fieldDialogTitle = ref("添加字段");
-const fieldForm = reactive({
-  id: "",
-  name: "",
-  type: "string",
-  value: "",
-  mockRule: "",
-  parentId: null,
-});
-
-// 支持的字段类型
-const fieldTypes = [
-  { label: "字符串", value: "string" },
-  { label: "数字", value: "number" },
-  { label: "布尔值", value: "boolean" },
-  { label: "对象", value: "object" },
-  { label: "数组", value: "array" },
-  { label: "日期", value: "date" },
-  { label: "邮箱", value: "email" },
-  { label: "ID", value: "id" },
-];
-
-// 监听表单树变化，生成Mock数据模板
-watch(
-  () => formTreeData.value,
-  (newVal) => {
-    if (newVal.length > 0) {
-      const mockTemplate = formTreeToMockTemplate(newVal);
-      apiForm.mockData = JSON.stringify(mockTemplate, null, 2);
-      try {
-        previewData.value = Mock.mock(mockTemplate);
-      } catch (error) {
-        previewData.value = null;
-      }
-    } else {
-      apiForm.mockData = "";
-      previewData.value = null;
-    }
-  },
-  { deep: true },
-);
-
-// 表单树转换为Mock模板
-const formTreeToMockTemplate = (treeData) => {
-  const template = {};
-
-  treeData.forEach((node) => {
-    template[node.name] = convertNodeToMock(node);
-  });
-
-  return template;
-};
-
-// 转换单个节点为Mock格式
-const convertNodeToMock = (node) => {
-  if (node.type === "object" && node.children && node.children.length > 0) {
-    const obj = {};
-    node.children.forEach((child) => {
-      obj[child.name] = convertNodeToMock(child);
-    });
-    return obj;
-  } else if (
-    node.type === "array" &&
-    node.children &&
-    node.children.length > 0
-  ) {
-    return [convertNodeToMock(node.children[0])];
-  } else if (node.mockRule) {
-    return node.mockRule;
-  } else {
-    switch (node.type) {
-      case "string":
-        return node.value || "@string";
-      case "number":
-        return node.value ? Number(node.value) : "@integer";
-      case "boolean":
-        return node.value === "true";
-      case "date":
-        return "@date";
-      case "email":
-        return "@email";
-      case "id":
-        return "@id";
-      default:
-        return node.value || "";
-    }
-  }
-};
-
-// 添加根字段
-const addRootField = () => {
-  fieldDialogTitle.value = "添加字段";
-  Object.assign(fieldForm, {
-    id: Date.now(),
-    name: "",
-    type: "string",
-    value: "",
-    mockRule: "",
-    parentId: null,
-  });
-  fieldDialogVisible.value = true;
-};
-
-// 添加子字段
-const addChildField = (parentId) => {
-  fieldDialogTitle.value = "添加子字段";
-  Object.assign(fieldForm, {
-    id: Date.now(),
-    name: "",
-    type: "string",
-    value: "",
-    mockRule: "",
-    parentId,
-  });
-  fieldDialogVisible.value = true;
-};
-
-// 编辑字段
-const editField = (data) => {
-  fieldDialogTitle.value = "编辑字段";
-  Object.assign(fieldForm, {
-    id: data.id,
-    name: data.name,
-    type: data.type,
-    value: data.value || "",
-    mockRule: data.mockRule || "",
-    parentId: data.parentId,
-  });
-  fieldDialogVisible.value = true;
-};
-
-// 保存字段
-const saveField = () => {
-  if (!fieldForm.name) {
-    ElMessage.error("字段名称不能为空");
-    return;
-  }
-
-  if (fieldForm.parentId) {
-    // 添加/编辑子字段
-    const parentNode = findNodeById(formTreeData.value, fieldForm.parentId);
-    if (parentNode) {
-      if (!parentNode.children) {
-        parentNode.children = [];
-      }
-
-      const existingIndex = parentNode.children.findIndex(
-        (node) => node.id === fieldForm.id,
-      );
-      if (existingIndex > -1) {
-        parentNode.children[existingIndex] = {
-          id: fieldForm.id,
-          name: fieldForm.name,
-          type: fieldForm.type,
-          value: fieldForm.value,
-          mockRule: fieldForm.mockRule,
-          parentId: fieldForm.parentId,
-          children: parentNode.children[existingIndex].children,
-        };
-      } else {
-        parentNode.children.push({
-          id: fieldForm.id,
-          name: fieldForm.name,
-          type: fieldForm.type,
-          value: fieldForm.value,
-          mockRule: fieldForm.mockRule,
-          parentId: fieldForm.parentId,
-          children: [],
-        });
-      }
-    }
-  } else {
-    // 添加/编辑根字段
-    const existingIndex = formTreeData.value.findIndex(
-      (node) => node.id === fieldForm.id,
-    );
-    if (existingIndex > -1) {
-      formTreeData.value[existingIndex] = {
-        id: fieldForm.id,
-        name: fieldForm.name,
-        type: fieldForm.type,
-        value: fieldForm.value,
-        mockRule: fieldForm.mockRule,
-        parentId: null,
-        children: formTreeData.value[existingIndex].children,
-      };
-    } else {
-      formTreeData.value.push({
-        id: fieldForm.id,
-        name: fieldForm.name,
-        type: fieldForm.type,
-        value: fieldForm.value,
-        mockRule: fieldForm.mockRule,
-        parentId: null,
-        children: [],
-      });
-    }
-  }
-
-  fieldDialogVisible.value = false;
-  ElMessage.success("字段保存成功");
-};
-
-// 根据ID查找节点
-const findNodeById = (nodes, id) => {
-  for (const node of nodes) {
-    if (node.id === id) {
-      return node;
-    }
-    if (node.children) {
-      const found = findNodeById(node.children, id);
-      if (found) {
-        return found;
-      }
-    }
-  }
-  return null;
-};
-
-// 删除字段
-const deleteField = (id) => {
-  // 从根节点删除
-  const rootIndex = formTreeData.value.findIndex((node) => node.id === id);
-  if (rootIndex > -1) {
-    formTreeData.value.splice(rootIndex, 1);
-    ElMessage.success("字段删除成功");
-    return;
-  }
-
-  // 从子节点删除
-  deleteChildNode(formTreeData.value, id);
-};
-
-// 删除子节点
-const deleteChildNode = (nodes, id) => {
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (node.children) {
-      const childIndex = node.children.findIndex((child) => child.id === id);
-      if (childIndex > -1) {
-        node.children.splice(childIndex, 1);
-        ElMessage.success("字段删除成功");
-        return true;
-      }
-      if (deleteChildNode(node.children, id)) {
-        return true;
-      }
-    }
-  }
-  return false;
-};
-
-// 清空表单树
-const clearFormTree = () => {
-  ElMessageBox.confirm("确定要清空所有字段配置吗？", "提示", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  }).then(() => {
-    formTreeData.value = [];
-    ElMessage.success("已清空字段配置");
-  });
-};
-
-// 插入Mock规则
-const insertMockRule = (rule) => {
-  fieldForm.mockRule = rule;
-};
-
-// 预览数据
-const previewData = ref(null);
-
-// Mock模板
-const mockTemplates = {
-  user: `{
-  "success": true,
-  "code": 200,
-  "message": "操作成功",
-  "data": {
-    "id": "@id",
-    "name": "@cname",
-    "email": "@email",
-    "age": "@integer(18, 60)",
-    "birthday": "@date",
-    "address": "@city"
-  }
-}`,
-  list: `{
-  "success": true,
-  "code": 200,
-  "message": "操作成功",
-  "data|5-10": [{
-    "id|+1": 1,
-    "name": "@cname",
-    "email": "@email",
-    "date": "@datetime"
-  }]
-}`,
-  success: `{
-  "success": true,
-  "code": 200,
-  "message": "操作成功"
-}`,
-};
-
-// 插入Mock模板
-const insertMockTemplate = (type) => {
-  apiForm.mockData = mockTemplates[type];
-};
+const editingApi = ref({});
 
 // 添加接口
 const addApi = () => {
   apiDialogTitle.value = "添加接口";
-  Object.assign(apiForm, {
+  editingApi.value = {
     name: "",
     url: "",
     method: "GET",
@@ -1185,105 +739,35 @@ const addApi = () => {
     mockData: "",
     delay: 0,
     statusCode: 200,
-  });
-  // 清空表单树数据
-  formTreeData.value = [];
-  editingApiId.value = null;
+  };
   apiDialogVisible.value = true;
 };
 
 // 编辑接口
 const editApi = (row) => {
   apiDialogTitle.value = "编辑接口";
-  Object.assign(apiForm, {
-    name: row.name,
-    url: row.url,
-    method: row.method,
-    moduleId: row.moduleId,
-    mockData: row.mockData || "",
-    delay: row.delay || 0,
-    statusCode: row.statusCode || 200,
-  });
-
-  // 将mockData转换为表单树数据
-  if (row.mockData) {
-    try {
-      const mockData = JSON.parse(row.mockData);
-      formTreeData.value = mockDataToFormTree(mockData);
-    } catch (error) {
-      console.error("解析mockData失败:", error);
-      formTreeData.value = [];
-    }
-  } else {
-    formTreeData.value = [];
-  }
-
-  editingApiId.value = row.id;
+  editingApi.value = { ...row };
   apiDialogVisible.value = true;
 };
 
-// 将Mock数据转换为表单树数据
-const mockDataToFormTree = (data, parentId = null) => {
-  const treeData = [];
-
-  if (typeof data === "object" && data !== null) {
-    Object.entries(data).forEach(([key, value], index) => {
-      const node = {
-        id: Date.now() + index,
-        name: key,
-        type: getNodeType(value),
-        value: typeof value !== "object" ? String(value) : "",
-        mockRule: "",
-        parentId,
-        children: [],
-      };
-
-      if (typeof value === "object" && value !== null) {
-        node.children = mockDataToFormTree(value, node.id);
-      }
-
-      treeData.push(node);
-    });
-  }
-
-  return treeData;
-};
-
-// 获取节点类型
-const getNodeType = (value) => {
-  if (Array.isArray(value)) {
-    return "array";
-  } else if (typeof value === "object" && value !== null) {
-    return "object";
-  } else if (typeof value === "number") {
-    return "number";
-  } else if (typeof value === "boolean") {
-    return "boolean";
-  } else {
-    return "string";
-  }
-};
-
-// 保存接口
-const saveApi = async () => {
-  await apiFormRef.value.validate();
-
+// 处理接口保存
+const handleApiSave = async (apiData) => {
   const now = new Date().toLocaleString();
 
-  if (editingApiId.value) {
+  if (editingApi.value.id) {
     // 编辑现有接口
-    const index = apis.value.findIndex((api) => api.id === editingApiId.value);
+    const index = apis.value.findIndex((api) => api.id === editingApi.value.id);
     if (index > -1) {
       apis.value[index] = {
         ...apis.value[index],
-        ...apiForm,
+        ...apiData,
       };
     }
   } else {
     // 添加新接口
     const newApi = {
       id: Date.now(),
-      ...apiForm,
+      ...apiData,
       createdAt: now,
     };
     apis.value.push(newApi);

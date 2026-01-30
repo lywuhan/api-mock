@@ -167,7 +167,7 @@
     >
       <el-form :model="testForm" label-width="100px">
         <el-form-item label="请求URL">
-          <el-input v-model="testForm.url" disabled />
+          <el-input v-model="testForm.url"  />
         </el-form-item>
         <el-form-item label="请求方法">
           <el-select v-model="testForm.method" disabled>
@@ -494,7 +494,7 @@ const executeTest = async () => {
 
   try {
     const startTime = Date.now();
-    const params = JSON.parse(testForm.params);
+    const params = JSON.parse(testForm.params || "{}");
     const response = await apiTestService.testApi(
       testForm.url,
       testForm.method,

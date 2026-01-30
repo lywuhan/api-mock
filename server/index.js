@@ -11,6 +11,9 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+let apiRouter = express.Router();
+app.use('/', apiRouter);
+
 // 模拟API数据（实际项目中可以从文件或数据库读取）
 let apiConfigs = [];
 
@@ -19,35 +22,29 @@ let registeredRoutes = [];
 
 // 动态注册路由
 const registerRoutes = () => {
-  // 清除现有路由
-  if (app._router && app._router.stack) {
-    app._router.stack = app._router.stack.filter(layer => {
-      return !layer.route || !layer.route.path.startsWith('/api');
-    });
-  }
+  
+  // 重置路由
+  apiRouter.stack.length = 0;
+  apiRouter = express.Router();
+  app.use('/', apiRouter);
 
   // 清空注册记录
   registeredRoutes = [];
 
-  // 注册新路由
+  // 注册每个API配置
   apiConfigs.forEach(config => {
     try {
-      const { url, method, mockData, delay = 0, statusCode = 200 } = config;
-      
-      // 处理路径参数，如 /user/:id
-      const routePath = url.replace(/:\w+/g, (match) => {
-        return match; // 保留原始参数名，如 :id
-      });
+      const { url: routePath, method, mockData, delay = 0, statusCode = 200 } = config;
       
       // 检查方法是否支持
       const methodLower = method.toLowerCase();
-      if (!app[methodLower]) {
+      if (!apiRouter[methodLower]) {
         console.warn(`不支持的HTTP方法: ${method}`);
         return;
       }
       
       // 注册路由
-      app[methodLower](routePath, (req, res) => {
+      apiRouter[methodLower](routePath, (req, res) => {
         // 模拟响应延迟
         setTimeout(() => {
           try {
@@ -65,9 +62,10 @@ const registerRoutes = () => {
         }, delay);
       });
       
+      
       // 记录注册的路由
       registeredRoutes.push({ url: routePath, method });
-      console.log(`已注册路由: ${method} ${routePath}`);
+      console.log(`已注册路由: ${method} ${routePath} -> 延迟: ${delay}ms, 状态码: ${statusCode}`);
     } catch (error) {
       console.error('注册路由失败:', error, '配置:', config);
     }

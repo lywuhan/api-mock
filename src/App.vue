@@ -142,8 +142,8 @@
         <div ref="contextMenuRef"></div>
       </template>
       <div class="context-menu">
-        <el-button type="text" size="small" @click="editModule">编辑</el-button>
-        <el-button type="text" size="small" @click="deleteModule"
+        <el-button link type="primary" size="small" @click="editModule">编辑</el-button>
+        <el-button link type="primary" size="small" @click="deleteModule"
           >删除</el-button
         >
       </div>
@@ -213,72 +213,6 @@
       </template>
     </el-dialog>
 
-    <!-- 字段编辑弹窗 -->
-    <el-dialog
-      v-model="fieldDialogVisible"
-      :title="fieldDialogTitle"
-      width="600px"
-    >
-      <el-form :model="fieldForm" label-width="100px">
-        <el-form-item label="字段名称" required>
-          <el-input v-model="fieldForm.name" placeholder="请输入字段名称" />
-        </el-form-item>
-        <el-form-item label="字段类型" required>
-          <el-select v-model="fieldForm.type" placeholder="请选择字段类型">
-            <el-option
-              v-for="type in fieldTypes"
-              :key="type.value"
-              :label="type.label"
-              :value="type.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="默认值">
-          <el-input v-model="fieldForm.value" placeholder="请输入默认值" />
-        </el-form-item>
-        <el-form-item label="Mock规则">
-          <el-input
-            v-model="fieldForm.mockRule"
-            placeholder="请输入Mock.js规则，如 @name、@integer(1, 100)"
-          />
-          <div class="mock-rule-tips">
-            <el-button type="text" size="small" @click="insertMockRule('@name')"
-              >姓名</el-button
-            >
-            <el-button
-              type="text"
-              size="small"
-              @click="insertMockRule('@cname')"
-              >中文姓名</el-button
-            >
-            <el-button
-              type="text"
-              size="small"
-              @click="insertMockRule('@integer(1, 100)')"
-              >数字</el-button
-            >
-            <el-button type="text" size="small" @click="insertMockRule('@date')"
-              >日期</el-button
-            >
-            <el-button
-              type="text"
-              size="small"
-              @click="insertMockRule('@email')"
-              >邮箱</el-button
-            >
-            <el-button type="text" size="small" @click="insertMockRule('@id')"
-              >ID</el-button
-            >
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="fieldDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveField">保存</el-button>
-        </span>
-      </template>
-    </el-dialog>
   </el-container>
 </template>
 
@@ -599,9 +533,8 @@ const checkHealth = async () => {
 };
 
 // 保存配置到数据库
-const saveConfigToDB = async () => {
+const saveApiConfigToDB = async () => {
   try {
-    await dbService.saveModules(toRaw(modules.value));
     await dbService.saveApis(toRaw(apis.value));
     // 同步到后端
     await apiConfigService.updateConfigs(toRaw(apis.value));
@@ -609,6 +542,16 @@ const saveConfigToDB = async () => {
     console.error("保存配置失败:", error);
   }
 };
+
+const saveModuleConfigToDB = async () => {
+  try {
+    await dbService.saveModules(toRaw(modules.value));
+  } catch (error) {
+    console.error("保存配置失败:", error);
+  }
+};
+
+
 
 // 从数据库加载配置
 const loadConfigFromDB = async () => {
@@ -701,14 +644,7 @@ const importConfig = () => {
   input.click();
 };
 
-// 监听数据变化，自动保存
-watch(
-  [modules, apis],
-  async () => {
-    await saveConfigToDB();
-  },
-  { deep: true },
-);
+
 
 // 组件挂载时加载数据
 onMounted(async () => {
@@ -753,7 +689,6 @@ const editApi = (row) => {
 // 处理接口保存
 const handleApiSave = async (apiData) => {
   const now = new Date().toLocaleString();
-
   if (editingApi.value.id) {
     // 编辑现有接口
     const index = apis.value.findIndex((api) => api.id === editingApi.value.id);
@@ -777,7 +712,7 @@ const handleApiSave = async (apiData) => {
 
   // 保存配置到数据库并同步到后端
   try {
-    await saveConfigToDB();
+    await saveApiConfigToDB();
     ElMessage.success("接口保存成功并同步到后端");
   } catch (error) {
     console.error("同步配置失败:", error);

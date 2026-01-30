@@ -1,21 +1,13 @@
 <template>
   <!-- API添加/编辑弹窗 -->
-  <el-dialog v-model="dialogVisible" :title="dialogTitle" width="800px">
-    <el-form
-      :model="apiForm"
-      label-width="100px"
-      :rules="apiFormRules"
-      ref="apiFormRef"
-    >
+  <el-drawer v-model="dialogVisible" :title="dialogTitle" size="60%" direction="rtl">
+    <el-form :model="apiForm" label-width="100px" :rules="apiFormRules" ref="apiFormRef">
       <!-- 基础信息 -->
       <el-form-item label="接口名称" prop="name">
         <el-input v-model="apiForm.name" placeholder="请输入接口名称" />
       </el-form-item>
       <el-form-item label="URL路径" prop="url">
-        <el-input
-          v-model="apiForm.url"
-          placeholder="请输入URL路径，以/开头"
-        />
+        <el-input v-model="apiForm.url" placeholder="请输入URL路径，以/开头" />
       </el-form-item>
       <el-form-item label="请求方法" prop="method">
         <el-select v-model="apiForm.method" placeholder="请选择请求方法">
@@ -27,12 +19,7 @@
       </el-form-item>
       <el-form-item label="所属模块" prop="moduleId">
         <el-select v-model="apiForm.moduleId" placeholder="请选择所属模块">
-          <el-option
-            v-for="module in modules"
-            :key="module.id"
-            :label="module.label"
-            :value="module.id"
-          />
+          <el-option v-for="module in modules" :key="module.id" :label="module.label" :value="module.id" />
         </el-select>
       </el-form-item>
 
@@ -42,57 +29,54 @@
           <!-- 表单树操作栏 -->
           <div class="form-tree-actions">
             <el-button type="primary" size="small" @click="addRootField">
-              <el-icon><Plus /></el-icon> 添加字段
+              <el-icon>
+                <Plus />
+              </el-icon> 添加字段
             </el-button>
             <el-button type="success" size="small" @click="clearFormTree">
-              <el-icon><Delete /></el-icon> 清空
+              <el-icon>
+                <Delete />
+              </el-icon> 清空
             </el-button>
           </div>
 
           <!-- 表单树 -->
           <div class="form-tree">
-            <el-tree
-              :data="formTreeData"
-              node-key="id"
-              :props="treeProps"
-              default-expand-all
-            >
+            <el-tree :data="formTreeData" node-key="id" :props="treeProps" default-expand-all>
               <template #default="{ node, data }">
                 <div class="tree-node-content">
                   <span class="field-name">{{ data.name }}</span>
                   <span class="field-type">({{ data.type }})</span>
                   <div class="node-actions">
-                    <el-button
-                      type="text"
-                      size="small"
-                      @click="editField(data)"
-                    >
-                      <el-icon><Edit /></el-icon> 编辑
+                    <el-button link type="primary" size="small" @click="editField(data)">
+                      <el-icon>
+                        <Edit />
+                      </el-icon> 编辑
                     </el-button>
-                    <el-button
-                      type="text"
-                      size="small"
-                      @click="addChildField(data.id)"
-                    >
-                      <el-icon><Plus /></el-icon> 添加子字段
+                    <el-button link type="primary" size="small" @click="addChildField(data.id)">
+                      <el-icon>
+                        <Plus />
+                      </el-icon> 添加子字段
                     </el-button>
-                    <el-button
-                      type="text"
-                      size="small"
-                      @click="deleteField(data.id)"
-                    >
-                      <el-icon><Delete /></el-icon> 删除
+                    <el-button link type="primary" size="small" @click="deleteField(data.id)">
+                      <el-icon>
+                        <Delete />
+                      </el-icon> 删除
                     </el-button>
                   </div>
                 </div>
+              </template>
+
+              <template #empty>
+                <el-empty description="请添加字段配置" />
               </template>
             </el-tree>
           </div>
 
           <!-- 空状态 -->
-          <div v-if="formTreeData.length === 0" class="form-tree-empty">
-            <el-empty description="请添加字段配置" />
-          </div>
+          <!-- <div v-if="formTreeData.length === 0" class="form-tree-empty">
+            
+          </div> -->
         </div>
       </el-form-item>
 
@@ -108,20 +92,10 @@
 
       <!-- 响应设置 -->
       <el-form-item label="响应延迟">
-        <el-input-number
-          v-model="apiForm.delay"
-          :min="0"
-          :max="5000"
-          placeholder="请输入延迟时间（ms）"
-        />
+        <el-input-number v-model="apiForm.delay" :min="0" :max="5000" placeholder="请输入延迟时间（ms）" />
       </el-form-item>
       <el-form-item label="HTTP状态码">
-        <el-input-number
-          v-model="apiForm.statusCode"
-          :min="100"
-          :max="599"
-          placeholder="请输入状态码"
-        />
+        <el-input-number v-model="apiForm.statusCode" :min="100" :max="599" placeholder="请输入状态码" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -130,64 +104,31 @@
         <el-button type="primary" @click="saveApi">保存</el-button>
       </span>
     </template>
-  </el-dialog>
+  </el-drawer>
 
   <!-- 字段编辑弹窗 -->
-  <el-dialog
-    v-model="fieldDialogVisible"
-    :title="fieldDialogTitle"
-    width="600px"
-  >
+  <el-dialog v-model="fieldDialogVisible" :title="fieldDialogTitle" width="600px">
     <el-form :model="fieldForm" label-width="100px">
       <el-form-item label="字段名称" required>
         <el-input v-model="fieldForm.name" placeholder="请输入字段名称" />
       </el-form-item>
       <el-form-item label="字段类型" required>
         <el-select v-model="fieldForm.type" placeholder="请选择字段类型">
-          <el-option
-            v-for="type in fieldTypes"
-            :key="type.value"
-            :label="type.label"
-            :value="type.value"
-          />
+          <el-option v-for="type in fieldTypes" :key="type.value" :label="type.label" :value="type.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="默认值">
         <el-input v-model="fieldForm.value" placeholder="请输入默认值" />
       </el-form-item>
       <el-form-item label="Mock规则">
-        <el-input
-          v-model="fieldForm.mockRule"
-          placeholder="请输入Mock.js规则，如 @name、@integer(1, 100)"
-        />
+        <el-input v-model="fieldForm.mockRule" placeholder="请输入Mock.js规则，如 @name、@integer(1, 100)" />
         <div class="mock-rule-tips">
-          <el-button type="text" size="small" @click="insertMockRule('@name')"
-            >姓名</el-button
-          >
-          <el-button
-            type="text"
-            size="small"
-            @click="insertMockRule('@cname')"
-            >中文姓名</el-button
-          >
-          <el-button
-            type="text"
-            size="small"
-            @click="insertMockRule('@integer(1, 100)')"
-            >数字</el-button
-          >
-          <el-button type="text" size="small" @click="insertMockRule('@date')"
-            >日期</el-button
-          >
-          <el-button
-            type="text"
-            size="small"
-            @click="insertMockRule('@email')"
-            >邮箱</el-button
-          >
-          <el-button type="text" size="small" @click="insertMockRule('@id')"
-            >ID</el-button
-          >
+          <el-button link type="primary" size="small" @click="insertMockRule('@name')">姓名</el-button>
+          <el-button link type="primary" size="small" @click="insertMockRule('@cname')">中文姓名</el-button>
+          <el-button link type="primary" size="small" @click="insertMockRule('@integer(1, 100)')">数字</el-button>
+          <el-button link type="primary" size="small" @click="insertMockRule('@date')">日期</el-button>
+          <el-button link type="primary" size="small" @click="insertMockRule('@email')">邮箱</el-button>
+          <el-button link type="primary" size="small" @click="insertMockRule('@id')">ID</el-button>
         </div>
       </el-form-item>
     </el-form>
@@ -210,24 +151,24 @@ import Mock from "mockjs";
 const props = defineProps({
   visible: {
     type: Boolean,
-    default: false
+    default: false,
   },
   title: {
     type: String,
-    default: "添加接口"
+    default: "添加接口",
   },
   api: {
     type: Object,
-    default: () => ({})
+    default: () => ({}),
   },
   modules: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   currentModuleId: {
     type: [String, Number],
-    default: ""
-  }
+    default: "",
+  },
 });
 
 // Emits
@@ -236,7 +177,7 @@ const emit = defineEmits(["update:visible", "save"]);
 // 弹窗状态
 const dialogVisible = computed({
   get: () => props.visible,
-  set: (value) => emit("update:visible", value)
+  set: (value) => emit("update:visible", value),
 });
 
 const dialogTitle = computed(() => props.title);
@@ -362,7 +303,7 @@ watch(
       formTreeData.value = [];
     }
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: true },
 );
 
 // 表单树转换为Mock模板
@@ -644,6 +585,7 @@ const saveApi = async () => {
 <style scoped lang="scss">
 /* 表单树样式 */
 .form-tree-container {
+  width: 100%;
   border: 1px solid #e4e7ed;
   border-radius: 4px;
   padding: 15px;

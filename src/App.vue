@@ -4,10 +4,16 @@
       <h1>API Mock 数据平台</h1>
       <div class="header-actions">
         <el-button type="primary" @click="exportConfig">
-          <el-icon><Download /></el-icon> 导出配置
+          <el-icon>
+            <Download />
+          </el-icon>
+          导出配置
         </el-button>
         <el-button type="success" @click="importConfig">
-          <el-icon><Upload /></el-icon> 导入配置
+          <el-icon>
+            <Upload />
+          </el-icon>
+          导入配置
         </el-button>
       </div>
     </el-header>
@@ -17,7 +23,10 @@
         <div class="aside-header">
           <h3>模块目录</h3>
           <el-button type="primary" size="small" @click="addModule">
-            <el-icon><Plus /></el-icon> 添加模块
+            <el-icon>
+              <Plus />
+            </el-icon>
+            添加模块
           </el-button>
         </div>
         <!-- 目录树组件 -->
@@ -27,15 +36,18 @@
             :props="defaultProps"
             node-key="id"
             @node-click="handleNodeClick"
-            @node-contextmenu="handleNodeContextMenu"
             ref="treeRef"
           >
             <template #default="{ node, data }">
               <div class="custom-tree-node" :class="{ active: node.isCurrent }">
                 <span class="tree-node-label">{{ data.label }}</span>
                 <span class="custom-node-btn">
-                  <el-icon class="icon"><Plus /></el-icon>
-                  <el-icon class="icon"><Delete /></el-icon>
+                  <el-icon class="icon" @click="editModule(data)">
+                    <Edit />
+                  </el-icon>
+                  <el-icon class="icon">
+                    <Delete />
+                  </el-icon>
                 </span>
               </div>
             </template>
@@ -52,7 +64,10 @@
             @click="addApi"
             :disabled="!currentModuleId"
           >
-            <el-icon><Plus /></el-icon> 添加接口
+            <el-icon>
+              <Plus />
+            </el-icon>
+            添加接口
           </el-button>
         </div>
         <!-- 搜索筛选 -->
@@ -115,10 +130,12 @@
         <el-form-item label="所属模块">
           <el-tree
             style="width: 100%"
-            :data="modules"
+            :data="filterModules"
             :props="defaultProps"
+            node-key="id"
+            :current-node-key="currentParentNode?.id"
             default-expand-all
-            @node-click="handleNodeSelect"
+            @node-click="handleSelectParentModule"
           />
         </el-form-item>
       </el-form>
@@ -129,25 +146,6 @@
         </span>
       </template>
     </el-dialog>
-
-    <!-- 右键菜单 -->
-    <el-popover
-      v-model:visible="contextMenuVisible"
-      :width="120"
-      trigger="manual"
-      :position="'bottom'"
-      :reference="contextMenuRef"
-    >
-      <template #reference>
-        <div ref="contextMenuRef"></div>
-      </template>
-      <div class="context-menu">
-        <el-button link type="primary" size="small" @click="editModule">编辑</el-button>
-        <el-button link type="primary" size="small" @click="deleteModule"
-          >删除</el-button
-        >
-      </div>
-    </el-popover>
 
     <!-- API添加/编辑弹窗 -->
     <ApiDialog
@@ -167,7 +165,7 @@
     >
       <el-form :model="testForm" label-width="100px">
         <el-form-item label="请求URL">
-          <el-input v-model="testForm.url"  />
+          <el-input v-model="testForm.url" />
         </el-form-item>
         <el-form-item label="请求方法">
           <el-select v-model="testForm.method" disabled>
@@ -212,7 +210,6 @@
         </span>
       </template>
     </el-dialog>
-
   </el-container>
 </template>
 
@@ -222,14 +219,10 @@ import {
   reactive,
   computed,
   watch,
-  onMounted,
-  unref,
-  toValue,
-  toRaw,
+  onMounted, toRaw
 } from "vue";
-import { Plus, Download, Upload, Delete } from "@element-plus/icons-vue";
-import { ElMessage, ElLoading, ElMessageBox } from "element-plus";
-import Mock from "mockjs";
+import { Plus, Download, Upload, Delete, Edit } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
 import {
   apiConfigService,
   apiTestService,
@@ -237,6 +230,8 @@ import {
 } from "./services/apiService";
 import dbService from "./services/dbService";
 import ApiDialog from "./components/ApiDialog.vue";
+import { filterTreeNodes } from "./utils";
+import { findParent } from "./utils/tree";
 
 // 模块数据
 const modules = ref([
@@ -246,6 +241,14 @@ const modules = ref([
     children: [],
   },
 ]);
+
+// 过滤当前选中的模块
+const filterModules = computed(() => {
+  return filterTreeNodes(
+    modules.value,
+    (node) => node.id !== currentModuleId.value,
+  );
+});
 
 const defaultProps = {
   children: "children",
@@ -264,26 +267,20 @@ const moduleDialogTitle = ref("添加模块");
 const moduleForm = reactive({ label: "" });
 const editingModuleId = ref(null);
 
-// 右键菜单
-const contextMenuVisible = ref(false);
-const contextMenuRef = ref(null);
 const selectedNode = ref(null);
 
+const currentParentNode = computed(() => {
+  return findParent(modules.value, currentModuleId.value);
+});
 // 处理节点点击
 const handleNodeClick = (data, node) => {
+  selectedNode.value = node;
   currentModuleId.value = data.id;
   currentModuleName.value = data.label;
 };
 
-const handleNodeSelect = (data) => {
+const handleSelectParentModule = (data) => {
   targetNode.value = data;
-};
-
-// 处理右键菜单
-const handleNodeContextMenu = (event, data, node) => {
-  event.preventDefault();
-  selectedNode.value = node;
-  contextMenuVisible.value = true;
 };
 
 // 添加模块
@@ -295,41 +292,18 @@ const addModule = () => {
 };
 
 // 编辑模块
-const editModule = () => {
-  if (selectedNode.value) {
-    const data = selectedNode.value.data;
+const editModule = (data) => {
+  if (data) {
+    // const data = selectedNode.value.data;
     moduleDialogTitle.value = "编辑模块";
     moduleForm.label = data.label;
     editingModuleId.value = data.id;
 
     moduleDialogVisible.value = true;
-    contextMenuVisible.value = false;
   }
 };
 
 // 删除模块
-const deleteModule = () => {
-  if (selectedNode.value) {
-    const data = selectedNode.value.data;
-    // 找到并删除模块
-    const deleteNode = (nodes, id) => {
-      for (let i = 0; i < nodes.length; i++) {
-        if (nodes[i].id === id) {
-          nodes.splice(i, 1);
-          return true;
-        }
-        if (nodes[i].children && nodes[i].children.length > 0) {
-          if (deleteNode(nodes[i].children, id)) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-    deleteNode(modules.value, data.id);
-    contextMenuVisible.value = false;
-  }
-};
 
 // 保存模块
 const saveModule = () => {
@@ -370,9 +344,8 @@ const saveModule = () => {
     } else {
       modules.value.push(newModule);
     }
-    
   }
-  saveModuleConfigToDB()
+  saveModuleConfigToDB();
   moduleDialogVisible.value = false;
 };
 
@@ -465,6 +438,7 @@ const deleteApi = (id) => {
   if (index > -1) {
     apis.value.splice(index, 1);
   }
+  saveApiConfigToDB()
 };
 
 // 测试接口相关
@@ -551,8 +525,6 @@ const saveModuleConfigToDB = async () => {
     console.error("保存配置失败:", error);
   }
 };
-
-
 
 // 从数据库加载配置
 const loadConfigFromDB = async () => {
@@ -645,8 +617,6 @@ const importConfig = () => {
   input.click();
 };
 
-
-
 // 组件挂载时加载数据
 onMounted(async () => {
   await loadConfigFromDB();
@@ -728,6 +698,7 @@ const handleApiSave = async (apiData) => {
   padding: 0;
   box-sizing: border-box;
 }
+
 .el-tree-node.is-current > .el-tree-node__content {
   background-color: var(--el-tree-node-hover-bg-color);
 }
@@ -824,13 +795,14 @@ const handleApiSave = async (apiData) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-.custom-tree-node.active {
   &:hover {
     .custom-node-btn {
       visibility: visible;
     }
   }
+}
+
+.custom-tree-node.active {
   .tree-node-label {
     color: #409eff;
   }
@@ -843,6 +815,7 @@ const handleApiSave = async (apiData) => {
   align-items: center;
   grid-auto-flow: column;
   padding-right: 5px;
+
   & .icon:hover {
     opacity: 0.7;
   }

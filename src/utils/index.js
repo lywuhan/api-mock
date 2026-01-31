@@ -94,3 +94,59 @@ export function jsonParse(jsonString) {
   processObject(parsed);
   return parsed;
 }
+
+
+/**
+ * 从节点树中过滤出符合条件的节点
+ * @param {Array|Object} tree - 节点树（数组或单个节点对象）
+ * @param {Function} predicate - 过滤条件函数，返回true表示保留该节点
+ * @param {Object} options - 配置选项
+ * @param {string} options.childrenKey - 子节点属性名，默认为'children'
+ * @param {boolean} options.includeParent - 是否保留父节点（当子节点匹配时），默认为true
+ * @returns {Array} 过滤后的节点数组
+ */
+export function filterTreeNodes(tree, predicate, options = {}) {
+  const {
+    childrenKey = 'children'
+  } = options;
+
+  // 处理数组形式的树
+  if (Array.isArray(tree)) {
+    const result = tree
+      .map(node => filterTreeNodes(node, predicate, options))
+      .filter(item => item !== null);
+    return result.length > 0 ? result : null;
+  }
+
+  // 检查当前节点是否匹配
+  const currentNodeMatch = predicate(tree);
+  
+  // 如果当前节点不匹配，直接返回null（包括所有子节点都会被过滤）
+  if (!currentNodeMatch) {
+    return null;
+  }
+
+  // 处理子节点
+  const children = tree[childrenKey];
+  let filteredChildren = null;
+  
+  if (children && Array.isArray(children)) {
+    filteredChildren = children
+      .map(child => filterTreeNodes(child, predicate, options))
+      .filter(item => item !== null);
+  }
+
+  // 构建返回结果
+  return {
+    ...tree,
+    [childrenKey]: filteredChildren && filteredChildren.length > 0 
+      ? filteredChildren 
+      : undefined
+  };
+}
+
+
+
+
+
+

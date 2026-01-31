@@ -146,6 +146,7 @@ import { ref, reactive, computed, watch } from "vue";
 import { Plus, Delete, Edit } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import Mock from "mockjs";
+import { guid } from "../utils";
 
 // Props
 const props = defineProps({
@@ -494,20 +495,23 @@ const deleteField = (id) => {
   }
 
   // 从子节点删除
-  deleteChildNode(formTreeData.value, id);
+  const found = deleteChildNode(formTreeData.value, id);
+  if (found) {
+    ElMessage.success("字段删除成功");
+  }
 };
 
 // 删除子节点
 const deleteChildNode = (nodes, id) => {
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
-    if (node.children) {
+    if (node.children && node.children.length > 0) {
       const childIndex = node.children.findIndex((child) => child.id === id);
       if (childIndex > -1) {
         node.children.splice(childIndex, 1);
-        ElMessage.success("字段删除成功");
         return true;
       }
+      // 递归查找子节点
       if (deleteChildNode(node.children, id)) {
         return true;
       }
@@ -538,9 +542,9 @@ const mockDataToFormTree = (data, parentId = null) => {
   const treeData = [];
 
   if (typeof data === "object" && data !== null) {
-    Object.entries(data).forEach(([key, value], index) => {
+    Object.entries(data).forEach(([key, value]) => {
       const node = {
-        id: Date.now() + index,
+        id: guid(),
         name: key,
         type: getNodeType(value),
         value: typeof value !== "object" ? String(value) : "",

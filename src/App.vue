@@ -45,7 +45,7 @@
                   <el-icon class="icon" @click="editModule(data)">
                     <Edit />
                   </el-icon>
-                  <el-icon class="icon">
+                  <el-icon class="icon" @click.stop="deleteModule(data)">
                     <Delete />
                   </el-icon>
                 </span>
@@ -304,6 +304,49 @@ const editModule = (data) => {
 };
 
 // 删除模块
+const deleteModule = async (data) => {
+  if (!data || !data.id) return;
+  try {
+    const apisUnder = await dbService.getApisByModuleId(data.id);
+    if (apisUnder && apisUnder.length > 0) {
+      ElMessage.warning("该模块下有接口数据，不允许删除");
+      return;
+    }
+
+    await ElMessageBox.confirm("确认要删除该模块吗？", "提示", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
+
+    const deleteNode = (nodes, id) => {
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const node = nodes[i];
+        if (node.id === id) {
+          nodes.splice(i, 1);
+          return true;
+        }
+        if (node.children && node.children.length > 0) {
+          if (deleteNode(node.children, id)) return true;
+        }
+      }
+      return false;
+    };
+
+    deleteNode(modules.value, data.id);
+
+    // 如果删除的是当前选中模块，清空选择
+    if (currentModuleId.value === data.id) {
+      currentModuleId.value = "";
+      currentModuleName.value = "";
+    }
+
+    await saveModuleConfigToDB();
+    ElMessage.success("模块已删除");
+  } catch (err) {
+    // 用户取消确认会抛出，直接忽略
+  }
+};
 
 // 保存模块
 const saveModule = () => {

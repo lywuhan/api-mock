@@ -146,7 +146,7 @@ import { ref, reactive, computed, watch } from "vue";
 import { Plus, Delete, Edit } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import Mock from "mockjs";
-import { guid } from "../utils";
+import { guid, jsonParse, stringify } from "../utils";
 
 // Props
 const props = defineProps({
@@ -237,6 +237,7 @@ const fieldTypes = [
   { label: "日期", value: "date" },
   { label: "邮箱", value: "email" },
   { label: "ID", value: "id" },
+  { label: "正则", value: "regexp" },
 ];
 
 // 预览数据
@@ -248,7 +249,8 @@ watch(
   (newVal) => {
     if (newVal.length > 0) {
       const mockTemplate = formTreeToMockTemplate(newVal);
-      apiForm.mockData = JSON.stringify(mockTemplate, null, 2);
+      console.log('mockTemplate', mockTemplate)
+      apiForm.mockData = stringify(mockTemplate, null, 2);
       try {
         previewData.value = Mock.mock(mockTemplate);
       } catch (error) {
@@ -281,7 +283,8 @@ watch(
       // 将mockData转换为表单树数据
       if (newApi.mockData) {
         try {
-          const mockData = JSON.parse(newApi.mockData);
+          console.log('mockdata', newApi.mockData)
+          const mockData = jsonParse(newApi.mockData);
           formTreeData.value = mockDataToFormTree(mockData);
         } catch (error) {
           console.error("解析mockData失败:", error);
@@ -348,6 +351,23 @@ const convertNodeToMock = (node) => {
         return "@email";
       case "id":
         return "@id";
+      case "regexp":
+        if (!node.value) {
+          return new RegExp("");
+        }
+        if (typeof node.value === "string" && node.value.startsWith("/")) {
+          const lastSlashIndex = node.value.lastIndexOf("/");
+          if (lastSlashIndex > 0) {
+            const pattern = node.value.slice(1, lastSlashIndex);
+            const flags = node.value.slice(lastSlashIndex + 1);
+            try {
+              return new RegExp(pattern, flags);
+            } catch (error) {
+              return new RegExp(pattern);
+            }
+          }
+        }
+        return new RegExp(node.value);
       default:
         return node.value || "";
     }
@@ -547,13 +567,20 @@ const mockDataToFormTree = (data, parentId = null) => {
         id: guid(),
         name: key,
         type: getNodeType(value),
-        value: typeof value !== "object" ? String(value) : "",
+        value:
+          typeof value !== "object" || value instanceof RegExp
+            ? String(value)
+            : "",
         mockRule: "",
         parentId,
         children: [],
       };
 
-      if (typeof value === "object" && value !== null) {
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !(value instanceof RegExp)
+      ) {
         node.children = mockDataToFormTree(value, node.id);
       }
 
@@ -568,6 +595,8 @@ const mockDataToFormTree = (data, parentId = null) => {
 const getNodeType = (value) => {
   if (Array.isArray(value)) {
     return "array";
+  } else if (value instanceof RegExp) {
+    return "regexp";
   } else if (typeof value === "object" && value !== null) {
     return "object";
   } else if (typeof value === "number") {

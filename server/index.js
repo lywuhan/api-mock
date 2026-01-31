@@ -6,6 +6,64 @@ const Mock = require('mockjs');
 const app = express();
 const port = 3000;
 
+const parseMockData = (mockData) => {
+  const processObject = (obj) => {
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const value = obj[key];
+        if (typeof value === 'object' && value !== null) {
+          processObject(value);
+        } else if (typeof value === 'string') {
+          if (value.startsWith('/') && !key.includes('|') && !key.includes('@')) {
+            try {
+              const lastSlashIndex = value.lastIndexOf('/');
+              if (lastSlashIndex > 0) {
+                const pattern = value.slice(1, lastSlashIndex);
+                const flags = value.slice(lastSlashIndex + 1);
+                if (/^[gimsuy]*$/.test(flags)) {
+                  obj[key] = new RegExp(pattern, flags);
+                }
+              }
+            } catch (error) {
+            }
+          }
+        }
+      }
+    }
+  };
+
+  if (mockData === null || mockData === undefined || mockData === '') {
+    return {};
+  }
+
+  if (typeof mockData === 'object') {
+    processObject(mockData);
+    return mockData;
+  }
+
+  if (typeof mockData !== 'string') {
+    return mockData;
+  }
+
+  const parseWithFallback = (input) => {
+    try {
+      return JSON.parse(input);
+    } catch (error) {
+      const fixed = input.replace(/"\/([^"]*?)\/([gimsuy]*)"/g, (match, body, flags) => {
+        const escapedBody = body.replace(/\\/g, '\\\\');
+        return `"\/${escapedBody}\/${flags}"`;
+      });
+      return JSON.parse(fixed);
+    }
+  };
+
+  const parsed = parseWithFallback(mockData.trim());
+  if (parsed && typeof parsed === 'object') {
+    processObject(parsed);
+  }
+  return parsed;
+};
+
 // 配置中间件
 app.use(cors());
 app.use(bodyParser.json());
@@ -49,7 +107,7 @@ const registerRoutes = () => {
         setTimeout(() => {
           try {
             // 生成Mock数据
-            const data = Mock.mock(JSON.parse(mockData));
+            const data = Mock.mock(parseMockData(mockData));
             res.status(statusCode).json(data);
           } catch (error) {
             console.error('Mock数据生成错误:', error);

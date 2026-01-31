@@ -18,12 +18,6 @@ pnpm run dev    # 同时启动前端与 Mock 服务
 - 分支与版本一致性：Mock 可与前端分支配套使用，便于回滚与场景测试；
 
 
-```bash
-pnpm add -D nodemon
-# 启动（示例）
-npx nodemon --watch server --exec "node server/index.js"
-```
-
 ## 预览
 ![](./API-MOCK.png)
 

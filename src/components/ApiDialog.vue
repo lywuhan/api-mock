@@ -65,10 +65,17 @@
                         <Edit />
                       </el-icon> 编辑
                     </el-button>
-                    <el-button link type="primary" size="small" @click="addChildField(data.id)">
+                    <el-button
+                      link
+                      type="primary"
+                      size="small"
+                      :disabled="!(data.type === 'object' || data.type === 'array')"
+                      @click="addChildField(data.id)"
+                    >
                       <el-icon>
                         <Plus />
-                      </el-icon> 添加子字段
+                      </el-icon>
+                      添加子字段
                     </el-button>
                     <el-button link type="primary" size="small" @click="deleteField(data.id)">
                       <el-icon>
@@ -410,6 +417,8 @@ const addRootField = () => {
 
 // 添加子字段
 const addChildField = (parentId) => {
+  const parentNode = findNodeById(formTreeData.value, parentId);
+  if (!parentNode) return;
   fieldDialogTitle.value = "添加子字段";
   Object.assign(fieldForm, {
     id: Date.now(),
@@ -455,6 +464,8 @@ const saveField = () => {
         (node) => node.id === fieldForm.id,
       );
       if (existingIndex > -1) {
+        const keepChildren =
+          fieldForm.type === "object" || fieldForm.type === "array";
         parentNode.children[existingIndex] = {
           id: fieldForm.id,
           name: fieldForm.name,
@@ -462,7 +473,9 @@ const saveField = () => {
           value: fieldForm.value,
           mockRule: fieldForm.mockRule,
           parentId: fieldForm.parentId,
-          children: parentNode.children[existingIndex].children,
+          children: keepChildren
+            ? parentNode.children[existingIndex].children || []
+            : [],
         };
       } else {
         parentNode.children.push({
@@ -472,7 +485,7 @@ const saveField = () => {
           value: fieldForm.value,
           mockRule: fieldForm.mockRule,
           parentId: fieldForm.parentId,
-          children: [],
+          children: fieldForm.type === "object" || fieldForm.type === "array" ? [] : [],
         });
       }
     }
@@ -482,6 +495,8 @@ const saveField = () => {
       (node) => node.id === fieldForm.id,
     );
     if (existingIndex > -1) {
+      const keepChildrenRoot =
+        fieldForm.type === "object" || fieldForm.type === "array";
       formTreeData.value[existingIndex] = {
         id: fieldForm.id,
         name: fieldForm.name,
@@ -489,7 +504,9 @@ const saveField = () => {
         value: fieldForm.value,
         mockRule: fieldForm.mockRule,
         parentId: null,
-        children: formTreeData.value[existingIndex].children,
+        children: keepChildrenRoot
+          ? formTreeData.value[existingIndex].children || []
+          : [],
       };
     } else {
       formTreeData.value.push({
@@ -499,7 +516,7 @@ const saveField = () => {
         value: fieldForm.value,
         mockRule: fieldForm.mockRule,
         parentId: null,
-        children: [],
+        children: fieldForm.type === "object" || fieldForm.type === "array" ? [] : [],
       });
     }
   }

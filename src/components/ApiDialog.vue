@@ -148,6 +148,7 @@
           <el-button link type="primary" size="small" @click="insertMockRule('@date')">日期</el-button>
           <el-button link type="primary" size="small" @click="insertMockRule('@email')">邮箱</el-button>
           <el-button link type="primary" size="small" @click="insertMockRule('@id')">ID</el-button>
+          <el-button link type="primary" size="small" @click="insertMockRule('@guid')">GUID</el-button>
         </div>
       </el-form-item>
     </el-form>

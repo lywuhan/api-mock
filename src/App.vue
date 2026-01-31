@@ -112,7 +112,7 @@
         <el-form-item label="模块名称" required>
           <el-input v-model="moduleForm.label" placeholder="请输入模块名称" />
         </el-form-item>
-        <el-form-item label="父模块">
+        <el-form-item label="所属模块">
           <el-tree
             style="width: 100%"
             :data="modules"
@@ -370,8 +370,9 @@ const saveModule = () => {
     } else {
       modules.value.push(newModule);
     }
+    
   }
-
+  saveModuleConfigToDB()
   moduleDialogVisible.value = false;
 };
 

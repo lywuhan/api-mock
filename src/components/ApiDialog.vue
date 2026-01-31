@@ -17,10 +17,22 @@
           <el-option label="DELETE" value="DELETE" />
         </el-select>
       </el-form-item>
-      <el-form-item label="所属模块" prop="moduleId">
-        <el-select v-model="apiForm.moduleId" placeholder="请选择所属模块">
-          <el-option v-for="module in modules" :key="module.id" :label="module.label" :value="module.id" />
-        </el-select>
+      <el-form-item label="所属模块" prop="moduleId" >
+        <el-tree
+          :data="modules"
+          :props="moduleTreeProps"
+          node-key="id"
+          default-expand-all
+          :current-node-key="apiForm.moduleId"
+          @node-click="handleModuleSelect"
+          ref="modulesTreeRef"
+          highlight-current
+          style="width: 100%;max-height:240px; overflow:auto; border:1px solid #eef; padding:6px; border-radius:4px;"
+        >
+          <template #default="{ node, data }">
+            <span>{{ data.label }}</span>
+          </template>
+        </el-tree>
       </el-form-item>
 
       <!-- Mock数据配置 -->
@@ -209,11 +221,19 @@ const apiFormRules = {
 // 表单树数据
 const formTreeData = ref([]);
 
-// 树组件配置
+// 表单树（字段配置）组件配置
 const treeProps = {
   children: "children",
   label: "name",
 };
+
+// 模块树配置（用于所属模块选择）
+const moduleTreeProps = {
+  children: "children",
+  label: "label",
+};
+
+const modulesTreeRef = ref(null);
 
 // 字段编辑弹窗
 const fieldDialogVisible = ref(false);
@@ -612,6 +632,11 @@ const getNodeType = (value) => {
 const saveApi = async () => {
   await apiFormRef.value.validate();
   emit("save", { ...apiForm });
+};
+
+// 节点点击选择模块
+const handleModuleSelect = (data) => {
+  apiForm.moduleId = data.id;
 };
 </script>
 

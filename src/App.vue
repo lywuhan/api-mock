@@ -222,7 +222,7 @@ import {
   onMounted, toRaw
 } from "vue";
 import { Plus, Download, Upload, Delete, Edit } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   apiConfigService,
   apiTestService,
@@ -432,13 +432,32 @@ const getMethodType = (method) => {
   return methodMap[method] || "info";
 };
 
-// 删除接口
+// 删除接口（带确认弹窗）
 const deleteApi = (id) => {
-  const index = apis.value.findIndex((api) => api.id === id);
-  if (index > -1) {
-    apis.value.splice(index, 1);
-  }
-  saveApiConfigToDB()
+  ElMessageBox.confirm("确认要删除该接口吗？", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  })
+    .then(async () => {
+      try {
+        // 若有后端删除接口，先调用后端API
+        await apiConfigService.deleteConfig(id);
+      } catch (err) {
+        // 如果后端不可达，也继续删除本地配置，但提示错误
+        console.warn("后端删除失败，已在本地删除：", err?.message || err);
+      }
+
+      const index = apis.value.findIndex((api) => api.id === id);
+      if (index > -1) {
+        apis.value.splice(index, 1);
+      }
+      await saveApiConfigToDB();
+      ElMessage.success("接口已删除");
+    })
+    .catch(() => {
+      // 用户取消或关闭弹窗，不做任何操作
+    });
 };
 
 // 测试接口相关

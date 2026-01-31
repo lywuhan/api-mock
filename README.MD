@@ -24,6 +24,8 @@ pnpm add -D nodemon
 npx nodemon --watch server --exec "node server/index.js"
 ```
 
+## 预览
+![](./MOCK数据平台.png)
 
 ## 许可证
 

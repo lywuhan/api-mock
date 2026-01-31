@@ -25,7 +25,7 @@ npx nodemon --watch server --exec "node server/index.js"
 ```
 
 ## 预览
-![](./MOCK数据平台.png)
+![](./API-MOCK.png)
 
 ## 许可证
 

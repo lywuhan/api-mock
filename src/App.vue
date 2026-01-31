@@ -842,9 +842,6 @@ const handleApiSave = async (apiData) => {
   margin-bottom: 20px;
 }
 
-.api-container {
-  padding: 0 20px 20px 0;
-}
 
 .empty-state {
   padding: 40px 0;

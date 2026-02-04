@@ -92,7 +92,7 @@
               </template>
             </el-table-column>
             <el-table-column prop="createdAt" label="创建时间" width="180" />
-            <el-table-column label="操作" width="300" fixed="right">
+            <el-table-column label="操作" width="360" fixed="right">
               <template #default="{ row }">
                 <el-button type="primary" size="small" @click="editApi(row)"
                   >编辑</el-button
@@ -102,6 +102,9 @@
                 >
                 <el-button type="success" size="small" @click="testApi(row)"
                   >测试</el-button
+                >
+                <el-button type="info" size="small" @click="copyApi(row)"
+                  >复制</el-button
                 >
                 <el-button size="small" @click="copyUrl(row.url)"
                   >复制URL</el-button
@@ -692,6 +695,14 @@ const copyUrl = (url) => {
   });
 };
 
+const getCopyName = (name) => {
+  const base = (name || "").trim() || "未命名接口";
+  const match = base.match(/-副本(\d+)?$/);
+  if (!match) return `${base}-副本`;
+  const next = match[1] ? Number(match[1]) + 1 : 2;
+  return base.replace(/-副本(\d+)?$/, `-副本${next}`);
+};
+
 // API弹窗
 const apiDialogVisible = ref(false);
 const apiDialogTitle = ref("添加接口");
@@ -716,6 +727,17 @@ const addApi = () => {
 const editApi = (row) => {
   apiDialogTitle.value = "编辑接口";
   editingApi.value = { ...row };
+  apiDialogVisible.value = true;
+};
+
+const copyApi = (row) => {
+  apiDialogTitle.value = "复制接口";
+  editingApi.value = {
+    ...row,
+    id: null,
+    __prefill: true,
+    name: getCopyName(row?.name),
+  };
   apiDialogVisible.value = true;
 };
 

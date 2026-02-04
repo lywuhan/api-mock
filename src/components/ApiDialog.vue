@@ -296,16 +296,17 @@ watch(
 watch(
   () => [props.api, props.currentModuleId],
   ([newApi, newModuleId]) => {
-    if (newApi.id) {
+    const shouldPrefill = Boolean(newApi && (newApi.id || newApi.__prefill));
+    if (shouldPrefill) {
       // 编辑模式
       Object.assign(apiForm, {
         name: newApi.name || "",
         url: newApi.url || "",
         method: newApi.method || "GET",
-        moduleId: newApi.moduleId || newModuleId,
+        moduleId: newApi.moduleId ?? newModuleId,
         mockData: newApi.mockData || "",
-        delay: newApi.delay || 0,
-        statusCode: newApi.statusCode || 200,
+        delay: newApi.delay ?? 0,
+        statusCode: newApi.statusCode ?? 200,
       });
 
       // 将mockData转换为表单树数据

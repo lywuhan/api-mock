@@ -358,12 +358,24 @@ const convertNodeToMock = (node) => {
       obj[child.name] = convertNodeToMock(child);
     });
     return obj;
-  } else if (
-    node.type === "array" &&
-    node.children &&
-    node.children.length > 0
-  ) {
-    return [convertNodeToMock(node.children[0])];
+  } else if (node.type === "array") {
+    // 如果有默认值，先尝试解析为数组
+    if (node.value) {
+      try {
+        const parsedValue = jsonParse(node.value);
+        if (Array.isArray(parsedValue)) {
+          return parsedValue;
+        }
+      } catch (error) {
+        // 如果解析失败，继续使用其他方式处理
+      }
+    }
+    // 如果有子字段，使用子字段生成数组
+    if (node.children && node.children.length > 0) {
+      return [convertNodeToMock(node.children[0])];
+    }
+    // 否则返回空数组
+    return [];
   } else if (node.mockRule) {
     return node.mockRule;
   } else {
@@ -602,14 +614,25 @@ const mockDataToFormTree = (data, parentId = null) => {
 
   if (typeof data === "object" && data !== null) {
     Object.entries(data).forEach(([key, value]) => {
+      const nodeType = getNodeType(value);
+      let nodeValue = "";
+
+      // 如果是数组类型，将其保存为 JSON 字符串作为默认值
+      if (Array.isArray(value)) {
+        if (value.length > 0 && typeof value[0] !== "object") {
+          // 如果是简单数组（非对象数组），保存为 JSON 字符串
+          nodeValue = JSON.stringify(value);
+        }
+      } else if (typeof value !== "object" || value instanceof RegExp) {
+        // 非对象类型或正则表达式
+        nodeValue = String(value);
+      }
+
       const node = {
         id: guid(),
         name: key,
-        type: getNodeType(value),
-        value:
-          typeof value !== "object" || value instanceof RegExp
-            ? String(value)
-            : "",
+        type: nodeType,
+        value: nodeValue,
         mockRule: "",
         parentId,
         children: [],
